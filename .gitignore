@@ -1,0 +1,21 @@
+# Large Datasets (TAHMO Weather Records)
+Train.csv
+Test.csv
+SampleSubmission.csv
+
+# Python environment & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+.pytest_cache/
+
+# OS-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE config files
+.vscode/
+.idea/

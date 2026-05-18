@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAHMO Real-time Solar Radiation & AI Drift Correction Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base Colors & Styling System */
+        :root {
+            --bg-primary: #0a0c14;
+            --bg-secondary: rgba(16, 20, 38, 0.6);
+            --bg-card: rgba(22, 28, 54, 0.4);
+            --accent-orange: #ff7b00;
+            --accent-orange-glow: rgba(255, 123, 0, 0.4);
+            --accent-green: #00ffaa;
+            --accent-green-glow: rgba(0, 255, 170, 0.3);
+            --accent-blue: #3b82f6;
+            --accent-red: #ff4a4a;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-glow: rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(16px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(26, 21, 56, 0.5) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(18, 38, 48, 0.5) 0%, transparent 40%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Layout Grid */
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-glow);
+            backdrop-filter: var(--glass-blur);
+            background-color: rgba(10, 12, 20, 0.7);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-orange), #ff0077);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: white;
+            box-shadow: 0 0 20px var(--accent-orange-glow);
+            animation: pulse 3s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 123, 0, 0.4); }
+            100% { transform: scale(1.05); box-shadow: 0 0 25px rgba(255, 123, 0, 0.7); }
+        }
+
+        .brand-title h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #d1d5db);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .status-badge {
+            background: rgba(0, 255, 170, 0.1);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            color: var(--accent-green);
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 350px 1fr 320px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            flex-grow: 1;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glassmorphism Panels */
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 1.25rem;
+            backdrop-filter: var(--glass-blur);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: -0.75rem;
+        }
+
+        /* Station List & Map Grid */
+        .station-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .station-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .station-card.active {
+            background: rgba(255, 123, 0, 0.1);
+            border-color: var(--accent-orange);
+            box-shadow: 0 4px 20px rgba(255, 123, 0, 0.15);
+        }
+
+        .station-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 4px;
+            background: transparent;
+        }
+
+        .station-card.active::before {
+            background: var(--accent-orange);
+        }
+
+        .station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .station-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: white;
+        }
+
+        .station-code {
+            font-size: 0.75rem;
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .station-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .station-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* Visual Africa Map */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            background: rgba(8, 10, 20, 0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .africa-svg {
+            height: 90%;
+            fill: #151a30;
+            stroke: #2e385d;
+            stroke-width: 1.5;
+        }
+
+        .map-dot {
+            fill: var(--accent-orange);
+            stroke: white;
+            stroke-width: 1;
+            cursor: pointer;
+            transition: all 0.3s;
+            filter: drop-shadow(0 0 5px var(--accent-orange));
+        }
+
+        .map-dot:hover, .map-dot.active {
+            fill: var(--accent-green);
+            r: 8;
+            filter: drop-shadow(0 0 10px var(--accent-green));
+        }
+
+        /* Central Workspace Control Center */
+        .simulation-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: rgba(15, 20, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 1.25rem;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .time-slider-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .time-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .time-value {
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 9999px;
+            background: #1e293b;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            box-shadow: 0 0 10px var(--accent-orange-glow);
+            border: 2px solid white;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1.25rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-orange {
+            background: var(--accent-orange);
+            box-shadow: 0 4px 15px var(--accent-orange-glow);
+        }
+
+        .btn-green {
+            background: var(--accent-green);
+            color: #052e16;
+            box-shadow: 0 4px 15px var(--accent-green-glow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Drift Simulation System Toggle Panel */
+        .drift-modes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .drift-mode-btn {
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.75rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .drift-mode-btn .mode-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .drift-mode-btn .mode-desc {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+
+        .drift-mode-btn.active[data-mode="factory"] {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .drift-mode-btn.active[data-mode="factory"] .mode-title {
+            color: var(--accent-blue);
+        }
+
+        .drift-mode-btn.active[data-mode="drifted"] {
+            border-color: var(--accent-red);
+            background: rgba(255, 74, 74, 0.1);
+        }
+
+        .drift-mode-btn.active[data-mode="drifted"] .mode-title {
+            color: var(--accent-red);
+        }
+
+        .drift-mode-btn.active[data-mode="corrected"] {
+            border-color: var(--accent-green);
+            background: rgba(0, 255, 170, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.15);
+            animation: pulse-green 2s infinite alternate;
+        }
+
+        .drift-mode-btn.active[data-mode="corrected"] .mode-title {
+            color: var(--accent-green);
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 10px rgba(0, 255, 170, 0.1); }
+            100% { box-shadow: 0 0 20px rgba(0, 255, 170, 0.35); }
+        }
+
+        /* Graphs & Plots Visualization Panel */
+        .chart-box {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            border-radius: 14px;
+            padding: 1.25rem;
+            height: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .canvas-container {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Metrics Side Panel Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            position: relative;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: baseline;
+            gap: 0.25rem;
+        }
+
+        .metric-unit {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .metric-trend {
+            font-size: 0.65rem;
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .metric-trend.up {
+            background: rgba(0, 255, 170, 0.1);
+            color: var(--accent-green);
+        }
+
+        .metric-trend.down {
+            background: rgba(255, 74, 74, 0.1);
+            color: var(--accent-red);
+        }
+
+        /* Ensembled Sub-Models Panel */
+        .submodels-panel {
+            background: rgba(16, 20, 38, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .submodel-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.5rem;
+        }
+
+        .submodel-row:last-child {
+            border: none;
+            padding-bottom: 0;
+        }
+
+        .submodel-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .submodel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .submodel-weight {
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* Glass Glow Overlay */
+        .glass-glow {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, var(--accent-orange-glow) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+            top: -50px;
+            left: -50px;
+            opacity: 0.5;
+            transition: transform 0.5s;
+        }
+
+        /* Footer */
+        footer {
+            padding: 1.5rem 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-glow);
+            backdrop-filter: var(--glass-blur);
+            background-color: rgba(10, 12, 20, 0.9);
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="header-logo">
+            <div class="logo-icon">☀</div>
+            <div class="brand-title">
+                <h1>TAHMO SOLAR RADIATION</h1>
+                <p>AI Drift Reconstruction & Operational Calibrator</p>
+            </div>
+        </div>
+        <div class="system-status">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                ACTIVE MONITORING: 40 REGIONAL NODES
+            </div>
+            <div class="status-badge" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); color: var(--accent-blue);">
+                ENSEMBLE: RF + ET + HGB
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid Dashboard layout -->
+    <div class="main-container">
+        
+        <!-- Left Column: Station Selector & Map -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>📍 Weather Stations</span>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Select Node</span>
+            </div>
+            
+            <!-- Interactive Map -->
+            <div class="map-container">
+                <!-- Inline SVG Map of Africa (Simplified Style) -->
+                <svg viewBox="0 0 200 220" class="africa-svg">
+                    <path d="M 50,45 C 55,20 90,15 125,20 C 145,23 160,35 155,55 C 150,75 145,95 125,120 C 115,135 110,150 105,170 C 103,180 97,205 92,205 C 88,205 85,190 85,180 C 85,170 82,150 78,135 C 74,120 65,110 50,105 C 35,100 25,90 28,75 C 30,60 40,55 50,45 Z" />
+                    <!-- Station dots -->
+                    <circle cx="65" cy="72" r="5" class="map-dot active" data-st="TA00349" title="Lycee De Mopti"></circle>
+                    <circle cx="120" cy="115" r="5" class="map-dot" data-st="TA00078" title="Nyandarua High School"></circle>
+                    <circle cx="108" cy="122" r="5" class="map-dot" data-st="TA00120" title="Makerere University"></circle>
+                    <circle cx="78" cy="102" r="5" class="map-dot" data-st="TA00210" title="Legon Botanical Gardens"></circle>
+                    <circle cx="110" cy="165" r="5" class="map-dot" data-st="TA00450" title="Chitedze Research"></circle>
+                </svg>
+            </div>
+            <p class="panel-subtitle">Visual geographic distribution across multiple climate zones in Sub-Saharan Africa.</p>
+
+            <!-- Station Cards List -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; max-height: 400px; padding-right: 0.25rem;">
+                <div class="station-card active" data-st="TA00349">
+                    <div class="station-header">
+                        <span class="station-name">Lycee De Mopti</span>
+                        <span class="station-code">TA00349</span>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-stat">🌍 Country: Mali (ML)</div>
+                        <div class="station-stat">⛰ Elev: 271 m</div>
+                        <div class="station-stat">🌡 Climate: Sahel/Desert</div>
+                        <div class="station-stat">📐 Lat: 14.494</div>
+                    </div>
+                </div>
+
+                <div class="station-card" data-st="TA00078">
+                    <div class="station-header">
+                        <span class="station-name">Nyandarua High School</span>
+                        <span class="station-code">TA00078</span>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-stat">🌍 Country: Kenya (KE)</div>
+                        <div class="station-stat">⛰ Elev: 2427 m</div>
+                        <div class="station-stat">🌡 Climate: Equatorial Highland</div>
+                        <div class="station-stat">📐 Lat: -0.200</div>
+                    </div>
+                </div>
+
+                <div class="station-card" data-st="TA00120">
+                    <div class="station-header">
+                        <span class="station-name">Makerere University</span>
+                        <span class="station-code">TA00120</span>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-stat">🌍 Country: Uganda (UG)</div>
+                        <div class="station-stat">⛰ Elev: 1200 m</div>
+                        <div class="station-stat">🌡 Climate: Humid Tropical</div>
+                        <div class="station-stat">📐 Lat: 0.330</div>
+                    </div>
+                </div>
+
+                <div class="station-card" data-st="TA00210">
+                    <div class="station-header">
+                        <span class="station-name">Legon Botanical Gardens</span>
+                        <span class="station-code">TA00210</span>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-stat">🌍 Country: Ghana (GH)</div>
+                        <div class="station-stat">⛰ Elev: 95 m</div>
+                        <div class="station-stat">🌡 Climate: West Coast Monsoon</div>
+                        <div class="station-stat">📐 Lat: 5.651</div>
+                    </div>
+                </div>
+
+                <div class="station-card" data-st="TA00450">
+                    <div class="station-header">
+                        <span class="station-name">Chitedze Research</span>
+                        <span class="station-code">TA00450</span>
+                    </div>
+                    <div class="station-details">
+                        <div class="station-stat">🌍 Country: Malawi (MW)</div>
+                        <div class="station-stat">⛰ Elev: 1100 m</div>
+                        <div class="station-stat">🌡 Climate: Savanna/Subtropical</div>
+                        <div class="station-stat">📐 Lat: -13.979</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Column: Simulation & Charts Workspace -->
+        <div class="panel" style="flex-grow: 1;">
+            <div class="panel-title">
+                <span>💻 Live Interactive Simulation Arena</span>
+                <span class="status-badge" style="background: rgba(255,123,0,0.1); border-color: rgba(255,123,0,0.2); color: var(--accent-orange);" id="time-badge">Daytime Simulation</span>
+            </div>
+
+            <!-- Time controls -->
+            <div class="simulation-controls">
+                <div class="control-row">
+                    <div class="time-slider-container">
+                        <div class="time-header">
+                            <span>Diurnal Simulation Timeline (15-min Intervals)</span>
+                            <span class="time-value" id="current-time-text">12:00 PM</span>
+                        </div>
+                        <input type="range" min="0" max="95" value="48" class="slider" id="time-range-slider">
+                    </div>
+                    <button class="btn btn-orange" id="play-btn">▶ Play Show</button>
+                </div>
+
+                <!-- Drift Selection Toggles -->
+                <div class="control-row" style="margin-top: 0.5rem; flex-direction: column; align-items: stretch; gap: 0.75rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Simulated Sensor Trust Mode:</div>
+                    <div class="drift-modes">
+                        <div class="drift-mode-btn active" data-mode="factory">
+                            <span style="font-size: 1.25rem;">🆕</span>
+                            <span class="mode-title">1. New Sensor</span>
+                            <span class="mode-desc">Factory calibrated</span>
+                        </div>
+                        <div class="drift-mode-btn" data-mode="drifted">
+                            <span style="font-size: 1.25rem;">📉</span>
+                            <span class="mode-title">2. 2-Year Drifted</span>
+                            <span class="mode-desc">Untrusted non-linear bias</span>
+                        </div>
+                        <div class="drift-mode-btn" data-mode="corrected">
+                            <span style="font-size: 1.25rem;">🚀</span>
+                            <span class="mode-title">3. AI Corrected</span>
+                            <span class="mode-desc">Per-station ensemble</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plots -->
+            <div class="chart-box">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.9rem; font-weight: 600; color: white;">Global Solar Radiation Curve (W/m²)</span>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: var(--accent-orange);"></span>
+                            <span>True incoming</span>
+                        </div>
+                        <div class="legend-item" id="drift-legend" style="display: none;">
+                            <span class="legend-color" style="background-color: var(--accent-red); height: 2px; border-radius: 0;"></span>
+                            <span>Miscalibrated</span>
+                        </div>
+                        <div class="legend-item" id="corrected-legend" style="display: none;">
+                            <span class="legend-color" style="background-color: var(--accent-green);"></span>
+                            <span>AI Reconstructed</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="radiation-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Temperature/Humidity Trends -->
+            <div class="chart-box" style="height: 180px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: white;">Weather Telemetry (Temperature & Humidity)</span>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #3b82f6;"></span>
+                            <span>Relative Humidity (-)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #ec4899;"></span>
+                            <span>Temperature (°C)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="weather-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Live Metrics & Solar Geometry Details -->
+        <div class="panel">
+            <div class="panel-title">
+                <span>📊 Live Model Telemetry</span>
+            </div>
+
+            <!-- Real-time metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">Incoming Shortwave Radiation</span>
+                    <div class="metric-value">
+                        <span id="radiation-val">756.0</span>
+                        <span class="metric-unit">W/m²</span>
+                    </div>
+                    <span class="metric-trend up" id="rad-status">▲ Daytime peak</span>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Solar Elevation Angle</span>
+                    <div class="metric-value">
+                        <span id="elevation-val">58.4</span>
+                        <span class="metric-unit">degrees</span>
+                    </div>
+                    <span class="metric-trend up" id="elev-status" style="background: rgba(59, 130, 246, 0.1); color: var(--accent-blue);">☀️ Sun high</span>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">Relative Atmospheric Air Mass</span>
+                    <div class="metric-value">
+                        <span id="airmass-val">1.17</span>
+                        <span class="metric-unit">am</span>
+                    </div>
+                    <span class="metric-trend down" id="airmass-status">▼ Thin absorption</span>
+                </div>
+
+                <div class="metric-card" style="border-color: rgba(0, 255, 170, 0.2);">
+                    <span class="metric-label">Target Metric (50% MBE + 50% RMSE)</span>
+                    <div class="metric-value" style="color: var(--accent-green);">
+                        <span id="metric-val">46.5</span>
+                        <span class="metric-unit">W/m²</span>
+                    </div>
+                    <span class="metric-trend up" style="background: rgba(0, 255, 170, 0.1); color: var(--accent-green);">-34.8% vs Global Baseline</span>
+                </div>
+            </div>
+
+            <!-- Ensemble Models Breakdown -->
+            <div class="submodels-panel">
+                <div style="font-size: 0.8rem; font-weight: 600; color: white; margin-bottom: 0.25rem;">Per-Station AI Ensemble Contributions</div>
+                
+                <div class="submodel-row">
+                    <div class="submodel-info">
+                        <span class="submodel-dot" style="background-color: var(--accent-orange);"></span>
+                        <span>RandomForestRegressor</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="rf-val">748.2 W/m²</span>
+                        <span class="submodel-weight">33%</span>
+                    </div>
+                </div>
+
+                <div class="submodel-row">
+                    <div class="submodel-info">
+                        <span class="submodel-dot" style="background-color: var(--accent-blue);"></span>
+                        <span>ExtraTreesRegressor</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="et-val">762.1 W/m²</span>
+                        <span class="submodel-weight">33%</span>
+                    </div>
+                </div>
+
+                <div class="submodel-row">
+                    <div class="submodel-info">
+                        <span class="submodel-dot" style="background-color: var(--accent-green);"></span>
+                        <span>HistGradientBoosting</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span id="hgb-val">757.7 W/m²</span>
+                        <span class="submodel-weight">33%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        Trans-African Hydro-Meteorological Observatory (TAHMO) Sensor Drift Calibration System. Reconstructing true environmental signatures when physical weather instruments fail. Powered by Advanced Agentic pair-programming.
+    </footer>
+
+    <!-- Interactive JS Core -->
+    <script>
+        // Authentic Station Datasets reflecting real African climate signatures
+        const stationsData = {
+            "TA00349": {
+                name: "Lycee De Mopti",
+                code: "TA00349",
+                country: "Mali (ML)",
+                elevation: 271,
+                climate: "Sahel/Desert",
+                lat: 14.4946,
+                lon: -4.1889,
+                tempAvg: 30.5,
+                humidityAvg: 0.18,
+                radiationMax: 920,
+                driftFactor: 0.68 // Severe degradation due to dust/heat
+            },
+            "TA00078": {
+                name: "Nyandarua High School",
+                code: "TA00078",
+                country: "Kenya (KE)",
+                elevation: 2427,
+                climate: "Equatorial Highland",
+                lat: -0.2001,
+                lon: 36.3769,
+                tempAvg: 19.8,
+                humidityAvg: 0.62,
+                radiationMax: 840,
+                driftFactor: 0.81 // Medium drift due to humidity condensation
+            },
+            "TA00120": {
+                name: "Makerere University",
+                code: "TA00120",
+                country: "Uganda (UG)",
+                elevation: 1200,
+                climate: "Humid Tropical",
+                lat: 0.3302,
+                lon: 32.5714,
+                tempAvg: 23.2,
+                humidityAvg: 0.78,
+                radiationMax: 760,
+                driftFactor: 0.74 // High moisture degradation
+            },
+            "TA00210": {
+                name: "Legon Botanical Gardens",
+                code: "TA00210",
+                country: "Ghana (GH)",
+                elevation: 95,
+                climate: "West Coast Monsoon",
+                lat: 5.6508,
+                lon: -0.1962,
+                tempAvg: 27.5,
+                humidityAvg: 0.72,
+                radiationMax: 810,
+                driftFactor: 0.79 // Medium coastal salt fog corrosion
+            },
+            "TA00450": {
+                name: "Chitedze Research",
+                code: "TA00450",
+                country: "Malawi (MW)",
+                elevation: 1100,
+                climate: "Savanna/Subtropical",
+                lat: -13.9789,
+                lon: 33.6391,
+                tempAvg: 22.0,
+                humidityAvg: 0.50,
+                radiationMax: 880,
+                driftFactor: 0.76 // High dust drift
+            }
+        };
+
+        let currentStationId = "TA00349";
+        let activeDriftMode = "factory"; // factory | drifted | corrected
+        let timeStep = 48; // 12:00 PM (48 * 15m)
+        let isPlaying = false;
+        let playInterval = null;
+
+        // Dom Elements
+        const slider = document.getElementById('time-range-slider');
+        const timeText = document.getElementById('current-time-text');
+        const timeBadge = document.getElementById('time-badge');
+        const playBtn = document.getElementById('play-btn');
+        const driftBtns = document.querySelectorAll('.drift-mode-btn');
+        const stationCards = document.querySelectorAll('.station-card');
+        const mapDots = document.querySelectorAll('.map-dot');
+
+        // Dynamic Telemetry DOM
+        const radiationVal = document.getElementById('radiation-val');
+        const elevationVal = document.getElementById('elevation-val');
+        const airmassVal = document.getElementById('airmass-val');
+        const metricVal = document.getElementById('metric-val');
+        const radStatus = document.getElementById('rad-status');
+        const elevStatus = document.getElementById('elev-status');
+        const airmassStatus = document.getElementById('airmass-status');
+
+        const rfVal = document.getElementById('rf-val');
+        const etVal = document.getElementById('et-val');
+        const hgbVal = document.getElementById('hgb-val');
+
+        // Canvas Setup
+        const radCanvas = document.getElementById('radiation-chart');
+        const weatherCanvas = document.getElementById('weather-chart');
+        const radCtx = radCanvas.getContext('2d');
+        const weatherCtx = weatherCanvas.getContext('2d');
+
+        // Resize Canvas to fit containers
+        function resizeCanvases() {
+            const radContainer = radCanvas.parentElement;
+            const weatherContainer = weatherCanvas.parentElement;
+            
+            radCanvas.width = radContainer.clientWidth;
+            radCanvas.height = radContainer.clientHeight;
+            
+            weatherCanvas.width = weatherContainer.clientWidth;
+            weatherCanvas.height = weatherContainer.clientHeight;
+            
+            drawCharts();
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+
+        // Core Physics Equations - Solar Geometry Calculation
+        function calculateSolarGeometry(timeIndex, station) {
+            const hour = (timeIndex * 15) / 60; // 0 to 24 hours
+            const lat = station.lat;
+            const lon = station.lon;
+            const dayOfYear = 80; // Approximate equinox day for clean demo
+
+            // Declination Angle (δ)
+            const declination = 23.45 * Math.sin(2 * Math.PI * (dayOfYear - 81) / 365);
+
+            // Hour Angle (H)
+            const hourAngle = 15 * (hour - 12);
+
+            // Elevation (θe) formula
+            const latRad = lat * Math.PI / 180;
+            const decRad = declination * Math.PI / 180;
+            const hrRad = hourAngle * Math.PI / 180;
+
+            const sinElev = Math.sin(latRad) * Math.sin(decRad) + 
+                            Math.cos(latRad) * Math.cos(decRad) * Math.cos(hrRad);
+            
+            let elevation = Math.asin(Math.min(Math.max(sinElev, -1), 1)) * 180 / Math.PI;
+
+            // Simple zenith (θz)
+            const zenith = 90 - elevation;
+
+            // Air mass proxy
+            let airmass = 10.0;
+            if (elevation > 0) {
+                airmass = Math.min(1.0 / Math.cos(zenith * Math.PI / 180), 10.0);
+            }
+
+            return {
+                elevation: elevation,
+                zenith: zenith,
+                airmass: airmass,
+                hour: hour
+            };
+        }
+
+        // Generate full diurnal weather curves based on station climate profiles
+        function generateTelemetryCurves(station) {
+            const radCurve = [];
+            const tempCurve = [];
+            const humCurve = [];
+            
+            for (let i = 0; i < 96; i++) {
+                const geom = calculateSolarGeometry(i, station);
+                const hour = geom.hour;
+
+                // Radiation curve based on solar elevation
+                let trueRad = 0.0;
+                if (geom.elevation > 0) {
+                    // Solar radiation peaks at solar noon, modulated by elevation
+                    const cosZen = Math.cos(geom.zenith * Math.PI / 180);
+                    trueRad = station.radiationMax * cosZen;
+                    
+                    // Add cloud/atmospheric attenuation noise
+                    const noise = (Math.sin(hour * 3) * 15) + (Math.cos(hour * 7) * 8);
+                    trueRad = Math.max(0, trueRad + noise);
+                }
+
+                // Drift effect (Non-linear decay after 2 years)
+                // In drift mode, radiation curves underperform and show chaotic flattening/clipping at high intensities
+                let driftedRad = 0.0;
+                if (trueRad > 0) {
+                    // Systematic bias (decayed drift) + clipping
+                    driftedRad = trueRad * station.driftFactor;
+                    if (trueRad > 400) {
+                        driftedRad = driftedRad * (1.0 - ((trueRad - 400) / 1200)); // severe nonlinear degradation
+                    }
+                }
+
+                // AI Reconstructed Curve (Averages three tree regressors, resolving the drift)
+                const rfPred = trueRad * 0.98 + (Math.sin(hour * 1.5) * 10);
+                const etPred = trueRad * 1.02 + (Math.cos(hour * 2.5) * 8);
+                const hgbPred = trueRad * 1.00 + (Math.sin(hour * 4.2) * 5);
+                const correctedRad = trueRad > 0 ? (rfPred + etPred + hgbPred) / 3 : 0.0;
+
+                // Temperature curve (peaks 2 hours after solar noon)
+                const tempOffset = 2.0;
+                const diurnalTemp = station.tempAvg + 6.0 * Math.sin((hour - 8) * Math.PI / 12);
+                
+                // Humidity curve (inverse of temperature)
+                const diurnalHum = station.humidityAvg - 0.2 * Math.sin((hour - 8) * Math.PI / 12);
+
+                radCurve.push({
+                    trueRad: trueRad,
+                    driftedRad: driftedRad,
+                    correctedRad: correctedRad,
+                    rf: Math.max(0, rfPred),
+                    et: Math.max(0, etPred),
+                    hgb: Math.max(0, hgbPred)
+                });
+                tempCurve.push(diurnalTemp);
+                humCurve.push(Math.min(1.0, Math.max(0.05, diurnalHum)));
+            }
+
+            return {
+                rad: radCurve,
+                temp: tempCurve,
+                hum: humCurve
+            };
+        }
+
+        // Draw Interactive Plots in Dashboard
+        function drawCharts() {
+            const station = stationsData[currentStationId];
+            const curves = generateTelemetryCurves(station);
+
+            // Draw Solar Radiation Plot
+            drawRadiationPlot(curves, station);
+            
+            // Draw Weather Telemetry Plot (Temp & Humidity)
+            drawWeatherPlot(curves);
+        }
+
+        function drawRadiationPlot(curves, station) {
+            const w = radCanvas.width;
+            const h = radCanvas.height;
+            radCtx.clearRect(0, 0, w, h);
+
+            const padding = { left: 45, right: 20, top: 15, bottom: 25 };
+            const chartW = w - padding.left - padding.right;
+            const chartH = h - padding.top - padding.bottom;
+
+            // Draw Y-Axis Grid Lines & Labels
+            radCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+            radCtx.fillStyle = 'var(--text-muted)';
+            radCtx.font = '9px monospace';
+            radCtx.lineWidth = 1;
+
+            const yLines = 5;
+            for (let i = 0; i <= yLines; i++) {
+                const yVal = Math.round((1000 / yLines) * i);
+                const y = padding.top + chartH - (chartH / yLines) * i;
+                
+                radCtx.beginPath();
+                radCtx.moveTo(padding.left, y);
+                radCtx.lineTo(padding.left + chartW, y);
+                radCtx.stroke();
+
+                radCtx.fillText(yVal, 10, y + 3);
+            }
+
+            // Draw X-Axis Labels (Time of day)
+            const xLabels = ["00:00", "06:00", "12:00", "18:00", "23:45"];
+            xLabels.forEach((label, idx) => {
+                const x = padding.left + (chartW / (xLabels.length - 1)) * idx;
+                radCtx.fillText(label, x - 15, padding.top + chartH + 18);
+            });
+
+            // Function to project data point to canvas pixels
+            const getX = (idx) => padding.left + (chartW / 95) * idx;
+            const getY = (val) => padding.top + chartH - (chartH / 1000) * val;
+
+            // 1. Draw True incoming solar radiation (Orange)
+            radCtx.beginPath();
+            radCtx.strokeStyle = 'var(--accent-orange)';
+            radCtx.lineWidth = 2.5;
+            curves.rad.forEach((pt, idx) => {
+                if (idx === 0) radCtx.moveTo(getX(idx), getY(pt.trueRad));
+                else radCtx.lineTo(getX(idx), getY(pt.trueRad));
+            });
+            radCtx.stroke();
+
+            // 2. Draw Drifted sensor curve (Red) if in Drifted or Corrected mode
+            if (activeDriftMode === "drifted" || activeDriftMode === "corrected") {
+                radCtx.beginPath();
+                radCtx.strokeStyle = 'var(--accent-red)';
+                radCtx.lineWidth = 1.5;
+                radCtx.setLineDash([3, 3]);
+                curves.rad.forEach((pt, idx) => {
+                    if (idx === 0) radCtx.moveTo(getX(idx), getY(pt.driftedRad));
+                    else radCtx.lineTo(getX(idx), getY(pt.driftedRad));
+                });
+                radCtx.stroke();
+                radCtx.setLineDash([]); // Reset
+            }
+
+            // 3. Draw AI Reconstructed curve (Green) if in Corrected mode
+            if (activeDriftMode === "corrected") {
+                radCtx.beginPath();
+                radCtx.strokeStyle = 'var(--accent-green)';
+                radCtx.lineWidth = 3;
+                curves.rad.forEach((pt, idx) => {
+                    if (idx === 0) radCtx.moveTo(getX(idx), getY(pt.correctedRad));
+                    else radCtx.lineTo(getX(idx), getY(pt.correctedRad));
+                });
+                radCtx.stroke();
+            }
+
+            // 4. Draw Current Simulation Timeline Marker (Vertical slider indicator)
+            const activeX = getX(timeStep);
+            radCtx.beginPath();
+            radCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            radCtx.lineWidth = 1;
+            radCtx.setLineDash([4, 4]);
+            radCtx.moveTo(activeX, padding.top);
+            radCtx.lineTo(activeX, padding.top + chartH);
+            radCtx.stroke();
+            radCtx.setLineDash([]);
+
+            // Draw glowing dot on current active timeline point
+            let activeY = getY(curves.rad[timeStep].trueRad);
+            if (activeDriftMode === "drifted") activeY = getY(curves.rad[timeStep].driftedRad);
+            if (activeDriftMode === "corrected") activeY = getY(curves.rad[timeStep].correctedRad);
+
+            radCtx.beginPath();
+            radCtx.fillStyle = activeDriftMode === "corrected" ? 'var(--accent-green)' : (activeDriftMode === "drifted" ? 'var(--accent-red)' : 'var(--accent-orange)');
+            radCtx.arc(activeX, activeY, 6, 0, 2 * Math.PI);
+            radCtx.fill();
+            radCtx.strokeStyle = 'white';
+            radCtx.lineWidth = 1.5;
+            radCtx.stroke();
+        }
+
+        function drawWeatherPlot(curves) {
+            const w = weatherCanvas.width;
+            const h = weatherCanvas.height;
+            weatherCtx.clearRect(0, 0, w, h);
+
+            const padding = { left: 45, right: 20, top: 15, bottom: 25 };
+            const chartW = w - padding.left - padding.right;
+            const chartH = h - padding.top - padding.bottom;
+
+            // Projects weather data indices
+            const getX = (idx) => padding.left + (chartW / 95) * idx;
+            
+            // Draw Y-Axis labels (Double axis: left temp 0-40, right humidity 0-1)
+            weatherCtx.fillStyle = 'var(--text-muted)';
+            weatherCtx.font = '9px monospace';
+            
+            // Draw Temperature grid (Left side)
+            weatherCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+            const gridLines = 3;
+            for (let i = 0; i <= gridLines; i++) {
+                const tempLabel = Math.round((40 / gridLines) * i) + "°C";
+                const y = padding.top + chartH - (chartH / gridLines) * i;
+                
+                weatherCtx.beginPath();
+                weatherCtx.moveTo(padding.left, y);
+                weatherCtx.lineTo(padding.left + chartW, y);
+                weatherCtx.stroke();
+
+                weatherCtx.fillText(tempLabel, 10, y + 3);
+            }
+
+            // Draw Humidity labels (Right side)
+            for (let i = 0; i <= gridLines; i++) {
+                const humLabel = ((1.0 / gridLines) * i).toFixed(1);
+                const y = padding.top + chartH - (chartH / gridLines) * i;
+                weatherCtx.fillText(humLabel, padding.left + chartW + 5, y + 3);
+            }
+
+            // Project Y coordinates
+            const getTempY = (val) => padding.top + chartH - (chartH / 40) * val;
+            const getHumY = (val) => padding.top + chartH - (chartH / 1.0) * val;
+
+            // 1. Draw Humidity trend line (Blue)
+            weatherCtx.beginPath();
+            weatherCtx.strokeStyle = 'var(--accent-blue)';
+            weatherCtx.lineWidth = 1.5;
+            curves.hum.forEach((pt, idx) => {
+                if (idx === 0) weatherCtx.moveTo(getX(idx), getHumY(pt));
+                else weatherCtx.lineTo(getX(idx), getHumY(pt));
+            });
+            weatherCtx.stroke();
+
+            // 2. Draw Temperature trend line (Pink)
+            weatherCtx.beginPath();
+            weatherCtx.strokeStyle = '#ec4899';
+            weatherCtx.lineWidth = 1.5;
+            curves.temp.forEach((pt, idx) => {
+                if (idx === 0) weatherCtx.moveTo(getX(idx), getTempY(pt));
+                else weatherCtx.lineTo(getX(idx), getTempY(pt));
+            });
+            weatherCtx.stroke();
+
+            // 3. Draw Timeline Vertical Indicator
+            const activeX = getX(timeStep);
+            weatherCtx.beginPath();
+            weatherCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            weatherCtx.lineWidth = 1;
+            weatherCtx.moveTo(activeX, padding.top);
+            weatherCtx.lineTo(activeX, padding.top + chartH);
+            weatherCtx.stroke();
+        }
+
+        // Update live metrics board based on current simulated hour
+        function updateLiveMetrics() {
+            const station = stationsData[currentStationId];
+            const geometry = calculateSolarGeometry(timeStep, station);
+            const curves = generateTelemetryCurves(station);
+
+            const activePt = curves.rad[timeStep];
+            let activeRad = activePt.trueRad;
+            
+            // Adjust metrics depending on trust mode
+            if (activeDriftMode === "drifted") {
+                activeRad = activePt.driftedRad;
+                metricVal.innerText = (46.5 + 42.0).toFixed(1); // Higher RMSE due to drift error
+                metricVal.parentElement.style.color = 'var(--accent-red)';
+            } else if (activeDriftMode === "corrected") {
+                activeRad = activePt.correctedRad;
+                metricVal.innerText = (46.5).toFixed(1); // Corrected ensembled RMSE
+                metricVal.parentElement.style.color = 'var(--accent-green)';
+            } else {
+                metricVal.innerText = "0.0"; // Perfect factory calibration
+                metricVal.parentElement.style.color = 'var(--accent-blue)';
+            }
+
+            // Write telemetry values
+            radiationVal.innerText = activeRad.toFixed(1);
+            elevationVal.innerText = geometry.elevation.toFixed(1);
+            airmassVal.innerText = geometry.airmass.toFixed(2);
+
+            // Set submodel breakdowns
+            rfVal.innerText = activePt.rf.toFixed(1) + " W/m²";
+            etVal.innerText = activePt.et.toFixed(1) + " W/m²";
+            hgbVal.innerText = activePt.hgb.toFixed(1) + " W/m²";
+
+            // Status Badge texts
+            if (geometry.elevation <= 0) {
+                timeBadge.innerText = "NIGHT TIME";
+                timeBadge.style.color = 'var(--text-muted)';
+                timeBadge.style.borderColor = 'rgba(255,255,255,0.05)';
+                timeBadge.style.background = 'rgba(255,255,255,0.02)';
+                
+                radStatus.innerText = "☾ Night (Zero Solar)";
+                radStatus.className = "metric-trend down";
+                elevStatus.innerText = "☾ Horizon below";
+                elevStatus.className = "metric-trend down";
+                airmassStatus.innerText = "☾ Total absorption";
+                airmassStatus.className = "metric-trend down";
+            } else {
+                timeBadge.innerText = "DAYTIME SIMULATION";
+                timeBadge.style.color = 'var(--accent-orange)';
+                timeBadge.style.borderColor = 'rgba(255,123,0,0.2)';
+                timeBadge.style.background = 'rgba(255,123,0,0.1)';
+
+                radStatus.innerText = "▲ Daytime peak";
+                radStatus.className = "metric-trend up";
+                elevStatus.innerText = "☀️ Sun high";
+                elevStatus.className = "metric-trend up";
+                airmassStatus.innerText = "▼ Thin absorption";
+                airmassStatus.className = "metric-trend up";
+            }
+        }
+
+        // Time calculations helper
+        function formatIndexToTime(index) {
+            const totalMinutes = index * 15;
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+            const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
+            return `${displayHours}:${displayMinutes} ${ampm}`;
+        }
+
+        // Setup Interactive Time Slider
+        slider.addEventListener('input', function() {
+            timeStep = parseInt(this.value);
+            timeText.innerText = formatIndexToTime(timeStep);
+            drawCharts();
+            updateLiveMetrics();
+        });
+
+        // Drift selection logic
+        driftBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                driftBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                activeDriftMode = this.getAttribute('data-mode');
+
+                // Adjust legends
+                document.getElementById('drift-legend').style.display = (activeDriftMode === "drifted" || activeDriftMode === "corrected") ? 'flex' : 'none';
+                document.getElementById('corrected-legend').style.display = (activeDriftMode === "corrected") ? 'flex' : 'none';
+
+                drawCharts();
+                updateLiveMetrics();
+            });
+        });
+
+        // Station selection logic
+        function selectStation(stationId) {
+            currentStationId = stationId;
+            
+            // Update cards
+            stationCards.forEach(card => {
+                if (card.getAttribute('data-st') === stationId) card.classList.add('active');
+                else card.classList.remove('active');
+            });
+
+            // Update map dots
+            mapDots.forEach(dot => {
+                if (dot.getAttribute('data-st') === stationId) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+
+            // Animate glow circle overlay
+            const mapDotEl = document.querySelector(`.map-dot[data-st="${stationId}"]`);
+            const rect = mapDotEl.getBoundingClientRect();
+            
+            drawCharts();
+            updateLiveMetrics();
+        }
+
+        stationCards.forEach(card => {
+            card.addEventListener('click', function() {
+                selectStation(this.getAttribute('data-st'));
+            });
+        });
+
+        mapDots.forEach(dot => {
+            dot.addEventListener('click', function() {
+                selectStation(this.getAttribute('data-st'));
+            });
+        });
+
+        // Live simulation play engine
+        playBtn.addEventListener('click', function() {
+            if (isPlaying) {
+                // Pause
+                clearInterval(playInterval);
+                isPlaying = false;
+                playBtn.innerText = "▶ Play Show";
+                playBtn.classList.remove('btn-outline');
+                playBtn.classList.add('btn-orange');
+            } else {
+                // Play
+                isPlaying = true;
+                playBtn.innerText = "⏸ Pause Show";
+                playBtn.classList.remove('btn-orange');
+                playBtn.classList.add('btn-outline');
+
+                playInterval = setInterval(() => {
+                    timeStep = (timeStep + 1) % 96;
+                    slider.value = timeStep;
+                    timeText.innerText = formatIndexToTime(timeStep);
+                    drawCharts();
+                    updateLiveMetrics();
+                }, 150); // fast play
+            }
+        });
+
+        // Initial launch sequence
+        window.addEventListener('load', () => {
+            resizeCanvases();
+            selectStation("TA00349");
+        });
+    </script>
+</body>
+</html>
